@@ -5,12 +5,12 @@ import {
   View, 
   TextInput, 
   TouchableOpacity, 
-  SafeAreaView, 
   KeyboardAvoidingView, 
   Platform,
   ScrollView
 } from 'react-native';
 import { Ionicons, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 export default function App() {
