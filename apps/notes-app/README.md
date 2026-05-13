@@ -29,6 +29,7 @@ A beautiful, feature-rich note-taking application built with React Native and Ex
 
 <div style="display: flex; gap: 10px; justify-content: space-around; margin: 20px 0;">
   <img src="./assets/screenshots/Dark_NotesList.jpg" width="30%" alt="Dark Mode - Notes List"/>
+  <img src="./assets/screenshots/Dark_newNote.jpg" width="30%" alt="Dark Mode - New Note"/>
   <img src="./assets/screenshots/Dark_updateNote.jpg" width="30%" alt="Dark Mode - Update Note"/>
 </div>
 
