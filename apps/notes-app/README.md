@@ -1,6 +1,7 @@
 # 📝 Notes App
 
 A beautiful, feature-rich note-taking application built with React Native and Expo. Create, edit, search, and organize your notes with a sleek dark/light mode interface.
+Here is the Video link: https://drive.google.com/file/d/1TC743pKKRwYg1IULhKHPsPR-y78jR5TA/view?usp=sharing
 
 ## ✨ Features
 
