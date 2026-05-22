@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, ScrollView, Modal } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { useState, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -129,10 +129,17 @@ export default function ProfileScreen({ navigation }: any) {
         </ScrollView>
       </SafeAreaView>
 
-      {/* Logout confirmation modal */}
-      <Modal visible={logoutVisible} transparent animationType="fade" onRequestClose={() => setLogoutVisible(false)}>
-        <View style={s.modalOverlay}>
-          <View style={s.modalSheet}>
+      {/* Logout bottom sheet — overlays profile at z-index 100 */}
+      {logoutVisible && (
+        <>
+          <Pressable style={s.backdrop} onPress={() => setLogoutVisible(false)} />
+          <LinearGradient
+            colors={["rgba(245,166,35,0.22)", "#1A1209", C.bg]}
+            style={s.modalSheet}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+          >
+            <View style={s.modalHandle} />
             <Text style={s.modalEmoji}>{logoutQuote.emoji}</Text>
             <Text style={s.modalTitle}>Leaving already?</Text>
             <Text style={s.modalQuote}>{logoutQuote.text}</Text>
@@ -144,9 +151,9 @@ export default function ProfileScreen({ navigation }: any) {
             <Pressable style={s.logoutConfirmBtn} onPress={() => { setLogoutVisible(false); logout(); }}>
               <Text style={s.logoutConfirmText}>Yes, logout</Text>
             </Pressable>
-          </View>
-        </View>
-      </Modal>
+          </LinearGradient>
+        </>
+      )}
     </View>
   );
 }
@@ -219,12 +226,17 @@ const s = StyleSheet.create({
   versionRow: { flexDirection: "row", alignItems: "center", gap: 6, justifyContent: "center", marginTop: 20 },
   versionText: { color: C.text20, fontSize: 12 },
 
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.60)", justifyContent: "flex-end" },
-  modalSheet: {
-    backgroundColor: C.card2, borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    padding: 28, paddingBottom: 44, borderTopWidth: 1, borderColor: C.border2,
-    gap: 14, alignItems: "center",
+  backdrop: {
+    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.55)", zIndex: 99,
   },
+  modalSheet: {
+    position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 100,
+    borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    padding: 28, paddingBottom: 48, borderTopWidth: 1, borderColor: C.amberMid,
+    gap: 16, alignItems: "center",
+  },
+  modalHandle:       { width: 40, height: 4, borderRadius: 2, backgroundColor: C.amberMid, marginBottom: 4 },
   modalEmoji:        { fontSize: 44 },
   modalTitle:        { color: C.text, fontSize: 22, fontWeight: "900" },
   modalQuote:        { color: C.text60, fontSize: 14, lineHeight: 22, textAlign: "center", fontStyle: "italic" },

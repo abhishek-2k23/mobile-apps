@@ -172,7 +172,11 @@ export default function HomeScreen({ navigation }: any) {
                   <Text style={s.cardOfferText}>{item.offer}</Text>
                 </View>
                 <View style={s.cardTypeDot}>
-                  <View style={[s.typeDotInner, item.type === "veg" ? s.vegDotColor : s.nonVegDotColor]} />
+                  <MaterialCommunityIcons
+                    name={item.type === "veg" ? "leaf" : "food-drumstick"}
+                    size={13}
+                    color={item.type === "veg" ? C.emerald : C.ruby}
+                  />
                 </View>
               </View>
               <View style={s.cardBody}>
@@ -290,10 +294,7 @@ const s = StyleSheet.create({
   cardImgGrad: { position: "absolute", bottom: 0, left: 0, right: 0, height: 80 },
   cardOfferPill: { position: "absolute", bottom: 10, left: 10, backgroundColor: C.amber, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   cardOfferText: { color: "#0C0906", fontSize: 10, fontWeight: "900" },
-  cardTypeDot: { position: "absolute", top: 10, right: 10, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(12,9,6,0.60)", alignItems: "center", justifyContent: "center" },
-  typeDotInner: { width: 10, height: 10, borderRadius: 5 },
-  vegDotColor:    { backgroundColor: C.emerald },
-  nonVegDotColor: { backgroundColor: C.ruby },
+  cardTypeDot: { position: "absolute", top: 10, right: 10, width: 26, height: 26, borderRadius: 13, backgroundColor: "rgba(12,9,6,0.70)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", alignItems: "center", justifyContent: "center" },
   cardBody: { padding: 14 },
   cardTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
   cardName: { flex: 1, color: C.text, fontSize: 17, fontWeight: "800" },

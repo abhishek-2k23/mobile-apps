@@ -19,7 +19,7 @@ export function MyOrdersScreen({ navigation }: any) {
   return (
     <View style={s.root}>
       <LinearGradient colors={GRAD.page} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={s.safe} edges={["bottom"]}>
+      <SafeAreaView style={s.safe} edges={["top", "bottom"]}>
         <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
           <Text style={s.title}>My Orders</Text>
           <Text style={s.sub}>Track the active cart and repeat recent meals.</Text>
@@ -91,7 +91,7 @@ export function SettingsScreen() {
   return (
     <View style={s.root}>
       <LinearGradient colors={GRAD.page} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={s.safe} edges={["bottom"]}>
+      <SafeAreaView style={s.safe} edges={["top", "bottom"]}>
         <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
           <View style={s.titleRow}>
             <View style={s.titleIcon}><IconSettings size={20} color={C.amber} /></View>
@@ -133,7 +133,7 @@ export function HelpScreen() {
   return (
     <View style={s.root}>
       <LinearGradient colors={GRAD.page} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={s.safe} edges={["bottom"]}>
+      <SafeAreaView style={s.safe} edges={["top", "bottom"]}>
         <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
           <View style={s.titleRow}>
             <View style={s.titleIcon}><IconHelp size={20} color={C.amber} /></View>
