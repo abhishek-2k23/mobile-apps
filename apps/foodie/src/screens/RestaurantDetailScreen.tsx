@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, Image, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -5,6 +6,7 @@ import { IconStar, IconClock, IconCart } from "../icons";
 import { useMenuCart } from "../hooks/useCart";
 import { MENU_ITEMS } from "../constants/data";
 import { C, GRAD } from "../constants/colors";
+import { useTheme } from "../context/ThemeContext";
 import FoodImage from "../components/FoodImage";
 
 const FALLBACK = {
@@ -24,6 +26,8 @@ export default function RestaurantDetailScreen({ route, navigation }: any) {
 
   const { counts, add, remove, getCount } = useMenuCart();
   const totalInCart = Object.values(counts).reduce((a, b) => a + b, 0);
+  const { C, GRAD } = useTheme();
+  const s = useMemo(() => makeStyles(C, GRAD), [C]);
 
   return (
     <View style={s.root}>
@@ -105,7 +109,7 @@ export default function RestaurantDetailScreen({ route, navigation }: any) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (C: any, GRAD: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   heroWrap: { width: "100%", height: 280 },
   hero: { width: "100%", height: "100%" },

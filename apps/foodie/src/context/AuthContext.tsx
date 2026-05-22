@@ -10,6 +10,8 @@ export type Order = {
   date: string;
 };
 
+export type FoodFilter = "all" | "veg" | "nonveg";
+
 type User = {
   identifier: string;
   name: string;
@@ -23,8 +25,8 @@ type AuthContextType = {
   cartCount: number;
   setCartCount: Dispatch<SetStateAction<number>>;
   orders: Order[];
-  vegMode: boolean;
-  setVegMode: Dispatch<SetStateAction<boolean>>;
+  foodFilter: FoodFilter;
+  setFoodFilter: (f: FoodFilter) => void;
   login: (identifier: string, password: string) => Promise<void>;
   signup: (identifier: string, password: string) => Promise<void>;
   socialLogin: (provider: string) => Promise<void>;
@@ -40,22 +42,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [cartCount, setCartCount] = useState(0);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [vegMode, setVegMode] = useState(false);
+  const [foodFilter, setFoodFilterState] = useState<FoodFilter>("all");
 
   useEffect(() => {
     Promise.all([
       AsyncStorage.getItem("userToken"),
       AsyncStorage.getItem("currentUser"),
       AsyncStorage.getItem("orders"),
+      AsyncStorage.getItem("foodFilter"),
       AsyncStorage.getItem("vegMode"),
-    ]).then(([token, savedUser, savedOrders, savedVegMode]) => {
+    ]).then(([token, savedUser, savedOrders, savedFoodFilter, savedVegMode]) => {
       setIsLoggedIn(!!token);
       setUser(savedUser ? JSON.parse(savedUser) : null);
       setOrders(savedOrders ? JSON.parse(savedOrders) : []);
-      setVegMode(savedVegMode === "true");
+      const filter = savedFoodFilter
+        ? (savedFoodFilter as FoodFilter)
+        : savedVegMode === "true" ? "veg" : "all";
+      setFoodFilterState(filter);
       setIsLoading(false);
     }).catch(() => setIsLoading(false));
   }, []);
+
+  const setFoodFilter = (f: FoodFilter) => {
+    setFoodFilterState(f);
+    AsyncStorage.setItem("foodFilter", f);
+  };
 
   const login = async (identifier: string, password: string) => {
     const normalized = identifier.trim().toLowerCase();
@@ -151,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isLoading, user, cartCount, setCartCount, orders, vegMode, setVegMode, login, signup, socialLogin, logout, addOrder }}>
+    <AuthContext.Provider value={{ isLoggedIn, isLoading, user, cartCount, setCartCount, orders, foodFilter, setFoodFilter, login, signup, socialLogin, logout, addOrder }}>
       {children}
     </AuthContext.Provider>
   );

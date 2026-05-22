@@ -1,9 +1,11 @@
+import { useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import FoodImage from "../components/FoodImage";
 import { C, GRAD } from "../constants/colors";
+import { useTheme } from "../context/ThemeContext";
 import { RESTAURANTS } from "../constants/data";
 import { IconStar, IconClock } from "../icons";
 
@@ -16,6 +18,8 @@ const CHEESY_QUOTES = [
 ];
 
 export default function SavedPlacesScreen({ navigation }: any) {
+  const { C, GRAD } = useTheme();
+  const s = useMemo(() => makeStyles(C, GRAD), [C]);
   const quote = CHEESY_QUOTES[Math.floor(Math.random() * CHEESY_QUOTES.length)];
 
   const openRestaurant = (item: typeof RESTAURANTS[0]) =>
@@ -88,7 +92,7 @@ export default function SavedPlacesScreen({ navigation }: any) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (C: any, GRAD: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   safe: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 10 },

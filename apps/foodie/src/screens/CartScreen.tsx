@@ -1,14 +1,18 @@
+import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../context/AuthContext";
 import { C, GRAD } from "../constants/colors";
+import { useTheme } from "../context/ThemeContext";
 
 export default function CartScreen({ route, navigation }: any) {
   const restaurantName = route.params?.restaurantName ?? "Current restaurant";
   const { cartCount, setCartCount, addOrder } = useAuth();
   const itemPrice   = 229;
   const deliveryFee = 39;
+  const { C, GRAD } = useTheme();
+  const s = useMemo(() => makeStyles(C, GRAD), [C]);
 
   const placeOrder = async () => {
     if (cartCount === 0) return;
@@ -90,12 +94,12 @@ export default function CartScreen({ route, navigation }: any) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (C: any, GRAD: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   safe: { flex: 1 },
   scroll: { padding: 20 },
 
-  title: { fontSize: 26, fontWeight: "800", color: C.text, letterSpacing: -0.5 },
+  title: { fontSize: 26, fontWeight: "800", color: C.text, letterSpacing: -0.5, paddingTop: 20 },
   sub:   { fontSize: 14, color: C.text60, marginTop: 4 },
   divider: { height: 1, backgroundColor: C.border, marginVertical: 20 },
 

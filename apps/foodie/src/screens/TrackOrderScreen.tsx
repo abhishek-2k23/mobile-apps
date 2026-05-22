@@ -1,9 +1,11 @@
+import { useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useAuth } from "../context/AuthContext";
 import { C, GRAD } from "../constants/colors";
+import { useTheme } from "../context/ThemeContext";
 
 const CHEESY_TRACK_QUOTES = [
   "Bhai, thoda sabr karo. Biryani pakti hai, jaldi nahi hoti. 🍛",
@@ -33,6 +35,8 @@ const DUMMY_ORDER = {
 
 export default function TrackOrderScreen({ navigation }: any) {
   const { cartCount, orders } = useAuth();
+  const { C, GRAD } = useTheme();
+  const s = useMemo(() => makeStyles(C, GRAD), [C]);
   const hasOrder = cartCount > 0 || orders.length > 0;
   const order = orders.length > 0 ? { ...DUMMY_ORDER, place: orders[0].place, total: orders[0].total } : DUMMY_ORDER;
   const quote = CHEESY_TRACK_QUOTES[Math.floor(Math.random() * CHEESY_TRACK_QUOTES.length)];
@@ -148,7 +152,7 @@ export default function TrackOrderScreen({ navigation }: any) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (C: any, GRAD: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   safe: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 10 },

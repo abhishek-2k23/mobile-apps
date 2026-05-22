@@ -1,5 +1,5 @@
 import { View, Text, FlatList, Pressable, StyleSheet, ScrollView, Dimensions } from "react-native";
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { IconSearch, IconStar, IconClock, IconLocation } from "../icons";
@@ -7,6 +7,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import FoodImage from "../components/FoodImage";
 import { useAuth } from "../context/AuthContext";
 import { C, GRAD } from "../constants/colors";
+import { useTheme } from "../context/ThemeContext";
 import { CATEGORIES, RESTAURANTS, HERO_BANNER, type Restaurant } from "../constants/data";
 
 const { width: SW } = Dimensions.get("window");
@@ -14,16 +15,13 @@ const { width: SW } = Dimensions.get("window");
 const FEATURED = RESTAURANTS.filter((r) => r.featured);
 
 export default function HomeScreen({ navigation }: any) {
-  const { vegMode } = useAuth();
-  const [foodType, setFoodType] = useState<"veg" | "nonveg">(vegMode ? "veg" : "nonveg");
+  const { foodFilter, setFoodFilter } = useAuth();
   const [category, setCategory] = useState<string | null>(null);
-
-  useEffect(() => {
-    setFoodType(vegMode ? "veg" : "nonveg");
-  }, [vegMode]);
+  const { C, GRAD } = useTheme();
+  const s = useMemo(() => makeStyles(C, GRAD), [C]);
 
   const visibleRestaurants = RESTAURANTS.filter(
-    (r) => r.type === foodType && (!category || r.category === category)
+    (r) => (foodFilter === "all" || r.type === foodFilter) && (!category || r.category === category)
   );
 
   const openRestaurant = (item: Restaurant) => {
@@ -42,35 +40,47 @@ export default function HomeScreen({ navigation }: any) {
           <View style={s.locationBlock}>
             <View style={s.locationRow}>
               <IconLocation size={13} color={C.amber} />
-              <Text style={s.locationLabel}>18 min delivery</Text>
+              <Text style={s.locationLabel}>30 min delivery</Text>
             </View>
-            <Text style={s.locationCity}>Bengaluru, India</Text>
+            <Text style={s.locationCity}>Ranchi, India</Text>
           </View>
 
-          {/* Veg / Non-veg toggle — redesigned */}
+          {/* All / Veg / Non-veg toggle */}
           <View style={s.toggle}>
             <Pressable
-              style={[s.toggleSide, foodType === "veg" && s.toggleVegActive]}
-              onPress={() => setFoodType("veg")}
+              style={[s.toggleSide, foodFilter === "all" && s.toggleAllActive]}
+              onPress={() => setFoodFilter("all")}
             >
               <MaterialCommunityIcons
-                name="leaf"
-                size={15}
-                color={foodType === "veg" ? "#fff" : C.emerald}
+                name="silverware-fork-knife"
+                size={13}
+                color={foodFilter === "all" ? "#fff" : C.text40}
               />
-              <Text style={[s.toggleLabel, foodType === "veg" && s.toggleLabelActive]}>Veg</Text>
+              <Text style={[s.toggleLabel, foodFilter === "all" && s.toggleLabelActive]}>All</Text>
             </Pressable>
             <View style={s.toggleDivider} />
             <Pressable
-              style={[s.toggleSide, foodType === "nonveg" && s.toggleNvActive]}
-              onPress={() => setFoodType("nonveg")}
+              style={[s.toggleSide, foodFilter === "veg" && s.toggleVegActive]}
+              onPress={() => setFoodFilter("veg")}
+            >
+              <MaterialCommunityIcons
+                name="leaf"
+                size={13}
+                color={foodFilter === "veg" ? "#fff" : C.emerald}
+              />
+              <Text style={[s.toggleLabel, foodFilter === "veg" && s.toggleLabelActive]}>Veg</Text>
+            </Pressable>
+            <View style={s.toggleDivider} />
+            <Pressable
+              style={[s.toggleSide, foodFilter === "nonveg" && s.toggleNvActive]}
+              onPress={() => setFoodFilter("nonveg")}
             >
               <MaterialCommunityIcons
                 name="food-drumstick"
-                size={15}
-                color={foodType === "nonveg" ? "#fff" : C.ruby}
+                size={13}
+                color={foodFilter === "nonveg" ? "#fff" : C.ruby}
               />
-              <Text style={[s.toggleLabel, foodType === "nonveg" && s.toggleLabelActive]}>Non-veg</Text>
+              <Text style={[s.toggleLabel, foodFilter === "nonveg" && s.toggleLabelActive]}>Non-veg</Text>
             </Pressable>
           </View>
         </View>
@@ -114,7 +124,7 @@ export default function HomeScreen({ navigation }: any) {
 
               {/* ── Categories ── */}
               <View style={s.sectionHeader}>
-                <Text style={s.sectionTitle}>Find your mood</Text>
+                <Text style={s.sectionTitle}>Food for every mood</Text>
                 <Text style={s.sectionAction} onPress={() => setCategory(null)}>All</Text>
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.catContent}>
@@ -202,7 +212,7 @@ export default function HomeScreen({ navigation }: any) {
           )}
           ListEmptyComponent={
             <View style={s.emptyResults}>
-              <Text style={s.emptyTitle}>No {foodType} picks here yet</Text>
+              <Text style={s.emptyTitle}>{foodFilter === "all" ? "No restaurants here" : `No ${foodFilter} picks here yet`}</Text>
               <Text style={s.emptyAction} onPress={() => setCategory(null)}>Clear filter</Text>
             </View>
           }
@@ -212,7 +222,7 @@ export default function HomeScreen({ navigation }: any) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (C: any, GRAD: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   safe: { flex: 1 },
 
@@ -232,8 +242,9 @@ const s = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 11, paddingVertical: 9,
   },
-  toggleVegActive: { backgroundColor: C.emerald },
-  toggleNvActive:  { backgroundColor: C.ruby },
+  toggleAllActive:  { backgroundColor: C.amber },
+  toggleVegActive:  { backgroundColor: C.emerald },
+  toggleNvActive:   { backgroundColor: C.ruby },
   toggleDivider: { width: 1, height: 28, backgroundColor: C.border2 },
   toggleLabel: { fontSize: 12, fontWeight: "800", color: C.text60 },
   toggleLabelActive: { color: "#fff" },

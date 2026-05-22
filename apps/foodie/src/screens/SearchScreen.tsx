@@ -4,12 +4,16 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo, useCallback } from "react";
 import { IconSearch, IconStar, IconClock } from "../icons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import FoodImage from "../components/FoodImage";
 import { C, GRAD } from "../constants/colors";
+import { useTheme } from "../context/ThemeContext";
 import { CATEGORIES, RESTAURANTS, type Restaurant } from "../constants/data";
+import { useFocusEffect } from "@react-navigation/native";
+import { useQuote } from "../hooks/useQuote";
+import { QuoteCard } from "../components/QuoteCard";
 
 const { width: SW } = Dimensions.get("window");
 const COL_W = (SW - 20 * 2 - 10) / 2;
@@ -17,6 +21,10 @@ const COL_W = (SW - 20 * 2 - 10) / 2;
 export default function SearchScreen({ navigation }: any) {
   const [query, setQuery] = useState("");
   const inputRef = useRef<TextInput>(null);
+  const { C, GRAD } = useTheme();
+  const s = useMemo(() => makeStyles(C, GRAD), [C]);
+  const { quote, next } = useQuote();
+  useFocusEffect(useCallback(() => { next(); }, [next]));
 
   const filtered = RESTAURANTS.filter((r) =>
     `${r.name} ${r.cuisine} ${r.category}`.toLowerCase().includes(query.toLowerCase())
@@ -61,6 +69,11 @@ export default function SearchScreen({ navigation }: any) {
 
         {query.length === 0 ? (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.browseContent}>
+
+            {/* Quote of the moment */}
+            <View style={s.quoteWrap}>
+              <QuoteCard key={quote.text} quote={quote} />
+            </View>
 
             {/* Category image grid */}
             <Text style={s.sectionTitle}>Browse by category</Text>
@@ -114,6 +127,8 @@ export default function SearchScreen({ navigation }: any) {
 }
 
 function RestaurantRow({ item, onPress }: { item: Restaurant; onPress: () => void }) {
+  const { C, GRAD } = useTheme();
+  const rs = useMemo(() => makeRsStyles(C), [C]);
   return (
     <Pressable style={rs.card} onPress={onPress}>
       <View style={rs.imgWrap}>
@@ -146,7 +161,7 @@ function RestaurantRow({ item, onPress }: { item: Restaurant; onPress: () => voi
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (C: any, GRAD: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   safe: { flex: 1 },
 
@@ -167,6 +182,7 @@ const s = StyleSheet.create({
   input: { flex: 1, fontSize: 15, color: C.text },
 
   browseContent: { paddingHorizontal: 20, paddingBottom: 32 },
+  quoteWrap: { marginBottom: 24, marginTop: 4 },
   sectionTitle:  { color: C.text, fontSize: 18, fontWeight: "800", marginBottom: 14, marginTop: 4 },
 
   catGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 28 },
@@ -188,7 +204,7 @@ const s = StyleSheet.create({
   emptyText:  { color: C.text40, fontSize: 13 },
 });
 
-const rs = StyleSheet.create({
+const makeRsStyles = (C: any) => StyleSheet.create({
   card: {
     flexDirection: "row", gap: 0, marginBottom: 14,
     backgroundColor: C.card, borderRadius: 18,

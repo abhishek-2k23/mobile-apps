@@ -1,11 +1,11 @@
 import { View, Text, StyleSheet, Pressable, ScrollView, Switch } from "react-native";
-import { useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useState, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../context/AuthContext";
 import { IconCart, IconClock, IconHelp, IconLocation, IconSettings } from "../icons";
 import { C, GRAD } from "../constants/colors";
+import { useTheme } from "../context/ThemeContext";
 
 const FAQS = [
   { q: "Where is my refund?",             a: "Refunds return to the original payment method once the kitchen approves the issue." },
@@ -15,6 +15,8 @@ const FAQS = [
 
 export function MyOrdersScreen({ navigation }: any) {
   const { cartCount, orders, setCartCount } = useAuth();
+  const { C, GRAD } = useTheme();
+  const s = useMemo(() => makeStyles(C, GRAD), [C]);
 
   return (
     <View style={s.root}>
@@ -78,15 +80,14 @@ export function MyOrdersScreen({ navigation }: any) {
 }
 
 export function SettingsScreen() {
-  const { vegMode, setVegMode } = useAuth();
+  const { foodFilter, setFoodFilter } = useAuth();
+  const { C, GRAD } = useTheme();
+  const s = useMemo(() => makeStyles(C, GRAD), [C]);
   const [pushAlerts,   setPushAlerts]   = useState(true);
   const [lateNight,    setLateNight]    = useState(true);
   const [compactCards, setCompactCards] = useState(false);
 
-  const handleVegChange = async (v: boolean) => {
-    setVegMode(v);
-    await AsyncStorage.setItem("vegMode", v.toString());
-  };
+  const handleVegChange = (v: boolean) => setFoodFilter(v ? "veg" : "all");
 
   return (
     <View style={s.root}>
@@ -103,7 +104,7 @@ export function SettingsScreen() {
 
           <Text style={s.sectionTitle}>Preferences</Text>
           <SettingRow label="Order updates"            sub="Push alerts for rider and kitchen status"  value={pushAlerts}   onChange={setPushAlerts} />
-          <SettingRow label="Veg only discovery"       sub="Prioritize vegetarian kitchens on browse"  value={vegMode}      onChange={handleVegChange} />
+          <SettingRow label="Veg only discovery"       sub="Prioritize vegetarian kitchens on browse"  value={foodFilter === "veg"} onChange={handleVegChange} />
           <SettingRow label="Late night picks"         sub="Show kitchens open after midnight"         value={lateNight}    onChange={setLateNight} />
           <SettingRow label="Compact restaurant cards" sub="Fit more results in search and home"       value={compactCards} onChange={setCompactCards} />
 
@@ -113,7 +114,7 @@ export function SettingsScreen() {
               <IconLocation size={16} color={C.amber} />
               <Text style={s.infoTitle}>Home</Text>
             </View>
-            <Text style={s.infoText}>Bengaluru, India</Text>
+            <Text style={s.infoText}>Ranchi, India</Text>
             <Text style={s.infoHint}>Default delivery address</Text>
           </View>
           <View style={s.infoCard}>
@@ -129,6 +130,8 @@ export function SettingsScreen() {
 
 export function HelpScreen() {
   const [supportChannel, setSupportChannel] = useState<"chat" | "call" | null>(null);
+  const { C, GRAD } = useTheme();
+  const s = useMemo(() => makeStyles(C, GRAD), [C]);
 
   return (
     <View style={s.root}>
@@ -179,6 +182,8 @@ export function HelpScreen() {
 }
 
 function SettingRow({ label, sub, value, onChange }: { label: string; sub: string; value: boolean; onChange: (v: boolean) => void }) {
+  const { C, GRAD } = useTheme();
+  const s = useMemo(() => makeStyles(C, GRAD), [C]);
   return (
     <View style={s.settingRow}>
       <View style={s.settingCopy}>
@@ -195,7 +200,7 @@ function SettingRow({ label, sub, value, onChange }: { label: string; sub: strin
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (C: any, GRAD: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   safe: { flex: 1 },
   content: { padding: 20, paddingBottom: 32 },

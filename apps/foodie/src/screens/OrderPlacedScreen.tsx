@@ -1,11 +1,20 @@
+import { useMemo, useCallback } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { C, GRAD } from "../constants/colors";
+import { useTheme } from "../context/ThemeContext";
+import { useFocusEffect } from "@react-navigation/native";
+import { useQuote } from "../hooks/useQuote";
+import { QuoteCard } from "../components/QuoteCard";
 
 export default function OrderPlacedScreen({ route, navigation }: any) {
   const restaurantName = route.params?.restaurantName ?? "the restaurant";
+  const { C, GRAD } = useTheme();
+  const s = useMemo(() => makeStyles(C, GRAD), [C]);
+  const { quote, next } = useQuote();
+  useFocusEffect(useCallback(() => { next(); }, [next]));
 
   return (
     <View style={s.root}>
@@ -19,6 +28,9 @@ export default function OrderPlacedScreen({ route, navigation }: any) {
           </View>
           <Text style={s.title}>Order placed!</Text>
           <Text style={s.sub}>Your order from {restaurantName} is confirmed and on its way.</Text>
+          <View style={s.quoteWrap}>
+            <QuoteCard key={quote.text} quote={quote} />
+          </View>
         </View>
 
         <Pressable
@@ -34,7 +46,7 @@ export default function OrderPlacedScreen({ route, navigation }: any) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (C: any, GRAD: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   safe: { flex: 1, padding: 24 },
   content: { flex: 1, alignItems: "center", justifyContent: "center" },
@@ -50,6 +62,7 @@ const s = StyleSheet.create({
 
   title: { color: C.text, fontSize: 30, fontWeight: "900", letterSpacing: -0.5 },
   sub:   { color: C.text60, fontSize: 15, lineHeight: 22, textAlign: "center", marginTop: 10, maxWidth: 280 },
+  quoteWrap: { width: "100%", marginTop: 28 },
 
   btn: { borderRadius: 16, overflow: "hidden" },
   btnGrad: { alignItems: "center", paddingVertical: 17 },

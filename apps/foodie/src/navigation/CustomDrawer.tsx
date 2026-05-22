@@ -6,6 +6,7 @@ import { useState, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
 import { IconOrders, IconSettings, IconHelp, IconLogout } from "../icons";
 import { C, GRAD } from "../constants/colors";
+import { useTheme } from "../context/ThemeContext";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 const ITEMS = [
@@ -33,6 +34,8 @@ export default function CustomDrawer(props: DrawerContentComponentProps) {
   const { logout, user } = useAuth();
   const active = props.state.routes[props.state.index].name;
   const [showLogout, setShowLogout] = useState(false);
+  const { C, GRAD } = useTheme();
+  const s = useMemo(() => makeStyles(C, GRAD), [C]);
 
   const quote = useMemo(
     () => CHEESY_QUOTES[Math.floor(Math.random() * CHEESY_QUOTES.length)],
@@ -119,7 +122,7 @@ export default function CustomDrawer(props: DrawerContentComponentProps) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (C: any, GRAD: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   scroll: { flex: 1, paddingTop: 0 },
 
