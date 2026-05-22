@@ -14,12 +14,12 @@ const navigationTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    primary: "#FF6B35",
-    background: "#0A0818",
-    card: "rgba(255,255,255,0.07)",
-    border: "rgba(255,255,255,0.12)",
+    primary: "#F5A623",
+    background: "#0C0906",
+    card: "rgba(250,190,60,0.05)",
+    border: "rgba(250,190,60,0.14)",
     text: "#FFFFFF",
-    notification: "#FF6B35",
+    notification: "#F5A623",
   },
 };
 
@@ -28,14 +28,14 @@ function RootNavigator() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0A0818" }}>
-        <ActivityIndicator color="#FF6B35" size="large" />
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0C0906" }}>
+        <ActivityIndicator color="#F5A623" size="large" />
       </View>
     );
   }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, animation: "fade", contentStyle: { backgroundColor: "#0A0818" } }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: "fade", contentStyle: { backgroundColor: "#0C0906" } }}>
       {isLoggedIn ? (
         <>
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
