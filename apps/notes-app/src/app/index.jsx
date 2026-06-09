@@ -1,4 +1,4 @@
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,14 +10,138 @@ import {
   useWindowDimensions,
   KeyboardAvoidingView,
   Platform,
-  ImageBackground,
   StatusBar,
-  Switch,
+  Animated,
+  Alert,
 } from 'react-native';
-
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as FileSystem from 'expo-file-system/legacy';
 
-// Listing View
+const NOTES_FILE = FileSystem.documentDirectory + 'notes.json';
+
+async function readNotes() {
+  try {
+    const info = await FileSystem.getInfoAsync(NOTES_FILE);
+    if (!info.exists) return [];
+    const raw = await FileSystem.readAsStringAsync(NOTES_FILE);
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+async function writeNotes(notes) {
+  await FileSystem.writeAsStringAsync(NOTES_FILE, JSON.stringify(notes));
+}
+
+// ─── Theme ───────────────────────────────────────────────────────────────────
+
+const LIGHT = {
+  bg: '#F7F8FC',
+  surface: '#FFFFFF',
+  surfaceAlt: '#EEF1F8',
+  text: '#0D0F1A',
+  subtext: '#6B7280',
+  muted: '#9CA3AF',
+  primary: '#6C63FF',
+  primaryLight: '#EDE9FF',
+  danger: '#EF4444',
+  border: '#E5E7EB',
+  cardShadow: '#00000014',
+};
+
+const DARK = {
+  bg: '#0D0F1A',
+  surface: '#161824',
+  surfaceAlt: '#1E2130',
+  text: '#F1F3FA',
+  subtext: '#9CA3AF',
+  muted: '#6B7280',
+  primary: '#8B83FF',
+  primaryLight: '#2A2560',
+  danger: '#F87171',
+  border: '#2A2D3E',
+  cardShadow: '#00000040',
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatDate(isoString) {
+  const date = new Date(isoString);
+  const now = new Date();
+  const diff = now - date;
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// ─── NoteCard ─────────────────────────────────────────────────────────────────
+
+const NoteCard = memo(({ item, colors, onPress, onLongPress }) => {
+  const scale = new Animated.Value(1);
+
+  const handlePressIn = () =>
+    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 20 }).start();
+
+  const handlePressOut = () =>
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onLongPress={onLongPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <Animated.View
+        style={[
+          styles.noteCard,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            shadowColor: colors.cardShadow,
+            transform: [{ scale }],
+          },
+        ]}
+      >
+        <View style={styles.cardTop}>
+          <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={1}>
+            {item.title || 'Untitled Note'}
+          </Text>
+          <Text style={[styles.cardDate, { color: colors.muted }]}>
+            {formatDate(item.updatedAt)}
+          </Text>
+        </View>
+        {!!item.content && (
+          <Text style={[styles.cardSnippet, { color: colors.subtext }]} numberOfLines={2}>
+            {item.content}
+          </Text>
+        )}
+      </Animated.View>
+    </Pressable>
+  );
+});
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+const EmptyState = memo(({ colors, hasSearch }) => (
+  <View style={styles.emptyWrap}>
+    <Text style={styles.emptyIcon}>{hasSearch ? '🔍' : '📝'}</Text>
+    <Text style={[styles.emptyTitle, { color: colors.text }]}>
+      {hasSearch ? 'No results' : 'No notes yet'}
+    </Text>
+    <Text style={[styles.emptySubtitle, { color: colors.subtext }]}>
+      {hasSearch ? 'Try a different search term' : 'Tap + to create your first note'}
+    </Text>
+  </View>
+));
+
+// ─── ListingView ─────────────────────────────────────────────────────────────
+
 const ListingView = memo(
   ({
     colors,
@@ -28,100 +152,72 @@ const ListingView = memo(
     filteredNotes,
     handleOpenNote,
     handleNewNote,
+    handleDeleteNote,
   }) => {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.bg }]}
-      >
-        <StatusBar
-          barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
 
+        {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Notes
-          </Text>
-
-          <View style={styles.row}>
-            <Text
-              style={{
-                color: colors.subtext,
-                marginRight: 8,
-              }}
-            >
-              {isDarkMode ? 'Dark' : 'Light'}
-            </Text>
-
-            <Switch
-              value={isDarkMode}
-              onValueChange={(val) => setIsDarkMode(val)}
-              trackColor={{
-                false: '#767577',
-                true: '#34C759',
-              }}
-            />
+          <View>
+            <Text style={[styles.headerLabel, { color: colors.subtext }]}>My Notes</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Notes</Text>
           </View>
+          <Pressable
+            onPress={() => setIsDarkMode((v) => !v)}
+            style={[styles.themeBtn, { backgroundColor: colors.surfaceAlt }]}
+          >
+            <Text style={styles.themeBtnIcon}>{isDarkMode ? '☀️' : '🌙'}</Text>
+          </Pressable>
         </View>
 
-        <TextInput
-          placeholder="Search notes..."
-          placeholderTextColor={colors.subtext}
-          style={[
-            styles.searchBar,
-            {
-              backgroundColor: colors.inputBg,
-              color: colors.text,
-            },
-          ]}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+        {/* Search */}
+        <View style={[styles.searchWrap, { backgroundColor: colors.surfaceAlt }]}>
+          <Text style={[styles.searchIcon, { color: colors.muted }]}>⌕</Text>
+          <TextInput
+            placeholder="Search notes…"
+            placeholderTextColor={colors.muted}
+            style={[styles.searchInput, { color: colors.text }]}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
+          {!!searchQuery && (
+            <Pressable onPress={() => setSearchQuery('')}>
+              <Text style={[styles.searchClear, { color: colors.muted }]}>✕</Text>
+            </Pressable>
+          )}
+        </View>
+
+        {/* Note count */}
+        {filteredNotes.length > 0 && (
+          <Text style={[styles.noteCount, { color: colors.muted }]}>
+            {filteredNotes.length} {filteredNotes.length === 1 ? 'note' : 'notes'}
+          </Text>
+        )}
 
         <FlatList
           data={filteredNotes}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, filteredNotes.length === 0 && { flex: 1 }]}
+          ListEmptyComponent={<EmptyState colors={colors} hasSearch={!!searchQuery} />}
           renderItem={({ item }) => (
-            <Pressable
+            <NoteCard
+              item={item}
+              colors={colors}
               onPress={() => handleOpenNote(item)}
-              style={({ pressed }) => [
-                styles.noteCard,
-                {
-                  backgroundColor: colors.card,
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.cardTitle,
-                  {
-                    color: colors.text,
-                  },
-                ]}
-              >
-                {item.title}
-              </Text>
-
-              <Text
-                numberOfLines={2}
-                style={[
-                  styles.cardSnippet,
-                  {
-                    color: colors.subtext,
-                  },
-                ]}
-              >
-                {item.content}
-              </Text>
-
-              <Text style={styles.cardDate}>{item.date}</Text>
-            </Pressable>
+              onLongPress={() => handleDeleteNote(item.id)}
+            />
           )}
         />
 
-        <Pressable style={styles.fab} onPress={handleNewNote}>
+        {/* FAB */}
+        <Pressable
+          style={({ pressed }) => [styles.fab, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+          onPress={handleNewNote}
+        >
           <Text style={styles.fabText}>+</Text>
         </Pressable>
       </SafeAreaView>
@@ -129,11 +225,11 @@ const ListingView = memo(
   }
 );
 
-// Editor View
+// ─── EditorView ───────────────────────────────────────────────────────────────
+
 const EditorView = memo(
   ({
     colors,
-    width,
     isDarkMode,
     tempTitle,
     tempContent,
@@ -141,92 +237,72 @@ const EditorView = memo(
     setTempContent,
     handleSave,
     handleClose,
+    isEditing,
   }) => {
+    const wordCount = tempContent.trim() ? tempContent.trim().split(/\s+/).length : 0;
+    const charCount = tempContent.length;
+
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.bg }]}
-        edges={['top', 'bottom']}
-      >
-        <StatusBar
-          barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
 
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <ImageBackground
-            source={{
-              uri: 'https://images.unsplash.com/photo-1557683316-973673baf926',
-            }}
-            style={[
-              styles.editorImage,
-              {
-                height: width > 600 ? 250 : 160,
-              },
-            ]}
-          >
-            <View style={styles.editorHeaderActions}>
-              <Pressable
-                style={styles.circleBtn}
-                onPress={handleClose}
-              >
-                <Text style={styles.btnText}>✕</Text>
-              </Pressable>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          {/* Editor toolbar */}
+          <View style={[styles.editorToolbar, { borderBottomColor: colors.border }]}>
+            <Pressable
+              style={[styles.toolbarBtn, { backgroundColor: colors.surfaceAlt }]}
+              onPress={handleClose}
+            >
+              <Text style={[styles.toolbarBtnText, { color: colors.subtext }]}>← Back</Text>
+            </Pressable>
 
-              <Pressable
-                style={[
-                  styles.saveBtn,
-                  {
-                    backgroundColor: colors.primary,
-                  },
-                ]}
-                onPress={handleSave}
-              >
-                <Text style={styles.saveBtnText}>Save</Text>
-              </Pressable>
-            </View>
-          </ImageBackground>
+            <Text style={[styles.toolbarStatus, { color: colors.muted }]}>
+              {isEditing ? 'Editing' : 'New Note'}
+            </Text>
 
-          <View
-            style={[
-              styles.inputArea,
-              {
-                backgroundColor: colors.bg,
-              },
-            ]}
-          >
+            <Pressable
+              style={[styles.saveBtn, { backgroundColor: colors.primary }]}
+              onPress={handleSave}
+            >
+              <Text style={styles.saveBtnText}>Save</Text>
+            </Pressable>
+          </View>
+
+          {/* Input area */}
+          <View style={[styles.inputArea, { backgroundColor: colors.bg }]}>
             <TextInput
-              placeholder="Header"
-              placeholderTextColor={colors.subtext}
-              style={[
-                styles.titleInput,
-                {
-                  color: colors.text,
-                },
-              ]}
+              placeholder="Title"
+              placeholderTextColor={colors.muted}
+              style={[styles.titleInput, { color: colors.text }]}
               value={tempTitle}
               onChangeText={setTempTitle}
               autoFocus
               blurOnSubmit={false}
+              returnKeyType="next"
+              maxLength={100}
             />
 
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
             <TextInput
-              placeholder="Start typing your note..."
-              placeholderTextColor={colors.subtext}
+              placeholder="Start typing your note…"
+              placeholderTextColor={colors.muted}
               multiline
               scrollEnabled
               textAlignVertical="top"
-              style={[
-                styles.bodyInput,
-                {
-                  color: colors.text,
-                },
-              ]}
+              style={[styles.bodyInput, { color: colors.text }]}
               value={tempContent}
               onChangeText={setTempContent}
               blurOnSubmit={false}
             />
+          </View>
+
+          {/* Footer stats */}
+          <View style={[styles.editorFooter, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
+            <Text style={[styles.footerStat, { color: colors.muted }]}>
+              {wordCount} {wordCount === 1 ? 'word' : 'words'}
+            </Text>
+            <Text style={[styles.footerStat, { color: colors.muted }]}>{charCount} chars</Text>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -234,115 +310,106 @@ const EditorView = memo(
   }
 );
 
+// ─── App ─────────────────────────────────────────────────────────────────────
+
 export default function App() {
   const systemTheme = useColorScheme();
-  const { width } = useWindowDimensions();
 
-  const [notes, setNotes] = useState([
-    {
-      id: '1',
-      title: 'Welcome!',
-      content: 'Tap the + button to create your first note.',
-      date: 'May 12',
-    },
-  ]);
-
-  const [isDarkMode, setIsDarkMode] = useState(
-    systemTheme === 'dark'
-  );
-
+  const [notes, setNotes] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(systemTheme === 'dark');
   const [currentView, setCurrentView] = useState('listing');
-
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Editor State
   const [tempTitle, setTempTitle] = useState('');
   const [tempContent, setTempContent] = useState('');
   const [editingNoteId, setEditingNoteId] = useState(null);
 
-  // Theme
-  const colors = {
-    bg: isDarkMode ? '#121212' : '#F2F2F7',
-    card: isDarkMode ? '#1E1E1E' : '#FFFFFF',
-    text: isDarkMode ? '#FFFFFF' : '#1C1C1E',
-    subtext: isDarkMode ? '#A1A1A1' : '#636366',
-    primary: '#007AFF',
-    inputBg: isDarkMode ? '#2C2C2E' : '#E5E5EA',
-  };
+  const colors = isDarkMode ? DARK : LIGHT;
 
-  // Actions
-  const handleSave = () => {
-    if (tempTitle.trim() || tempContent.trim()) {
-      if (editingNoteId) {
-        // Update Existing Note
-        setNotes((prevNotes) =>
-          prevNotes.map((note) =>
-            note.id === editingNoteId
-              ? {
-                  ...note,
-                  title: tempTitle || 'Untitled Note',
-                  content: tempContent,
-                }
-              : note
-          )
-        );
-      } else {
-        // Create New Note
-        const newNote = {
-          id: Date.now().toString(),
-          title: tempTitle || 'Untitled Note',
-          content: tempContent,
-          date: new Date().toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-          }),
-        };
+  // ── Persistence ────────────────────────────────────────────────────────────
 
-        setNotes((prevNotes) => [newNote, ...prevNotes]);
-      }
+  useEffect(() => {
+    readNotes().then((saved) => {
+      if (saved.length) setNotes(saved);
+    }).finally(() => setLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    if (loaded) writeNotes(notes);
+  }, [notes, loaded]);
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+
+  const handleSave = useCallback(() => {
+    if (!tempTitle.trim() && !tempContent.trim()) {
+      setCurrentView('listing');
+      return;
     }
-
+    const now = new Date().toISOString();
+    if (editingNoteId) {
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === editingNoteId
+            ? { ...n, title: tempTitle, content: tempContent, updatedAt: now }
+            : n
+        )
+      );
+    } else {
+      setNotes((prev) => [
+        { id: Date.now().toString(), title: tempTitle, content: tempContent, createdAt: now, updatedAt: now },
+        ...prev,
+      ]);
+    }
     setTempTitle('');
     setTempContent('');
     setEditingNoteId(null);
     setCurrentView('listing');
-  };
+  }, [editingNoteId, tempTitle, tempContent]);
 
-  const handleOpenNote = (note) => {
+  const handleOpenNote = useCallback((note) => {
     setTempTitle(note.title);
     setTempContent(note.content);
     setEditingNoteId(note.id);
     setCurrentView('editor');
-  };
+  }, []);
 
-  const handleNewNote = () => {
+  const handleNewNote = useCallback(() => {
     setTempTitle('');
     setTempContent('');
     setEditingNoteId(null);
     setCurrentView('editor');
-  };
+  }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setTempTitle('');
     setTempContent('');
     setEditingNoteId(null);
     setCurrentView('listing');
-  };
+  }, []);
 
-  // Filter Notes
-  const filteredNotes = useMemo(() => {
-    return notes.filter(
-      (note) =>
-        note.title
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        note.content
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase())
-    );
-  }, [searchQuery, notes]);
+  const handleDeleteNote = useCallback((id) => {
+    Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => setNotes((prev) => prev.filter((n) => n.id !== id)),
+      },
+    ]);
+  }, []);
 
-  // Render
+  const filteredNotes = useMemo(
+    () =>
+      notes.filter(
+        (n) =>
+          n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          n.content.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
+    [searchQuery, notes]
+  );
+
+  if (!loaded) return null;
+
   return currentView === 'listing' ? (
     <ListingView
       colors={colors}
@@ -353,11 +420,11 @@ export default function App() {
       filteredNotes={filteredNotes}
       handleOpenNote={handleOpenNote}
       handleNewNote={handleNewNote}
+      handleDeleteNote={handleDeleteNote}
     />
   ) : (
     <EditorView
       colors={colors}
-      width={width}
       isDarkMode={isDarkMode}
       tempTitle={tempTitle}
       tempContent={tempContent}
@@ -365,161 +432,127 @@ export default function App() {
       setTempContent={setTempContent}
       handleSave={handleSave}
       handleClose={handleClose}
+      isEditing={!!editingNoteId}
     />
   );
 }
 
-// Styles
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
 
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 16,
   },
-
-  headerTitle: {
-    fontSize: 34,
-    fontWeight: 'bold',
+  headerLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 },
+  headerTitle: { fontSize: 36, fontWeight: '800', letterSpacing: -0.5 },
+  themeBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+  themeBtnIcon: { fontSize: 20 },
 
-  searchBar: {
-    margin: 20,
-    padding: 12,
-    borderRadius: 12,
-    fontSize: 16,
+  // Search
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 24,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
   },
+  searchIcon: { fontSize: 18, marginRight: 8 },
+  searchInput: { flex: 1, fontSize: 15 },
+  searchClear: { fontSize: 14, paddingLeft: 8 },
 
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-  },
+  noteCount: { fontSize: 12, fontWeight: '500', paddingHorizontal: 24, marginBottom: 8 },
 
+  // List
+  listContent: { paddingHorizontal: 24, paddingBottom: 120 },
+
+  // Note card
   noteCard: {
     padding: 16,
     borderRadius: 16,
     marginBottom: 12,
-
+    borderWidth: 1,
     ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: {
-          width: 0,
-          height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-
-      android: {
-        elevation: 3,
-      },
+      ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10 },
+      android: { elevation: 2 },
     }),
   },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  cardTitle: { fontSize: 16, fontWeight: '700', flex: 1, marginRight: 8 },
+  cardDate: { fontSize: 11, fontWeight: '500' },
+  cardSnippet: { fontSize: 14, lineHeight: 20 },
 
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
+  // Empty state
+  emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 },
+  emptyIcon: { fontSize: 52, marginBottom: 16 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', marginBottom: 6 },
+  emptySubtitle: { fontSize: 14 },
 
-  cardSnippet: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-
-  cardDate: {
-    fontSize: 11,
-    color: '#8E8E93',
-    marginTop: 8,
-    fontWeight: '500',
-  },
-
+  // FAB
   fab: {
     position: 'absolute',
     right: 24,
-    bottom: 40,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#007AFF',
+    bottom: 36,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 8,
+    elevation: 6,
+    ...Platform.select({
+      ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 12 },
+    }),
   },
+  fabText: { color: '#FFF', fontSize: 30, fontWeight: '300', marginTop: -2 },
 
-  fabText: {
-    color: 'white',
-    fontSize: 32,
-    fontWeight: '300',
-    marginTop: -4,
-  },
-
-  // Editor
-  editorImage: {
-    width: '100%',
-  },
-
-  editorHeaderActions: {
+  // Editor toolbar
+  editorToolbar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 20 : 0,
-    marginTop: 10,
-  },
-
-  circleBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
     alignItems: 'center',
-  },
-
-  btnText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-
-  saveBtn: {
     paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  toolbarBtn: {
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
-    justifyContent: 'center',
+    borderRadius: 10,
   },
+  toolbarBtnText: { fontSize: 14, fontWeight: '600' },
+  toolbarStatus: { fontSize: 13, fontWeight: '500' },
+  saveBtn: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: 10 },
+  saveBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
 
-  saveBtnText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
+  // Editor inputs
+  inputArea: { flex: 1, paddingHorizontal: 24, paddingTop: 20 },
+  titleInput: { fontSize: 28, fontWeight: '800', marginBottom: 16, letterSpacing: -0.3 },
+  divider: { height: 1, marginBottom: 16 },
+  bodyInput: { flex: 1, fontSize: 16, lineHeight: 26 },
 
-  inputArea: {
-    flex: 1,
-    padding: 20,
+  // Editor footer
+  editorFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderTopWidth: 1,
   },
-
-  titleInput: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-
-  bodyInput: {
-    flex: 1,
-    fontSize: 18,
-    lineHeight: 26,
-    textAlignVertical: 'top',
-  },
+  footerStat: { fontSize: 12, fontWeight: '500' },
 });
